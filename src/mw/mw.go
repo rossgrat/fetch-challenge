@@ -7,7 +7,7 @@ import (
 	"github.com/rossgrat/fetch-challenge/src/logger"
 )
 
-// Basic middleware for logging HTTP transactions as they come int
+// Basic middleware for logging HTTP transactions as they come in
 func LogRequest(f http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 

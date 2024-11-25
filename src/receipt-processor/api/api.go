@@ -29,8 +29,8 @@ type ReceiptID struct {
 }
 
 // /receipts/process
-// In this endpoints, we receive a Receipt object, score it for points,
-// then save those points as a valid receipt UUID, returing the UUID
+// In this endpoint, we receive a Receipt object, score it for points,
+// then save those points as a valid receipt UUID, returning the UUID
 //
 // Note: We do not save receipts, or any kind of signature in the
 // database, if we wanted to prevent duplicate receipts from being sent,
@@ -83,6 +83,8 @@ type ReceiptPoints struct {
 }
 
 // receipts/:id/points
+// Retreive the points value for some previously processed receipt,
+// based on the provided ID
 func ReceiptPointsHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		WriteResponse(w, r, http.StatusNotFound,

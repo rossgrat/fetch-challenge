@@ -15,8 +15,9 @@ import (
 	"github.com/rossgrat/fetch-challenge/src/logger"
 )
 
-// Given an HTTP response write, a status code, and a body, perform the necessary
-// marshalling and and write the status code and body to the response
+// Given an HTTP response writer, a status code, and a body of data,
+// perform the necessary marshalling and and write the status
+// code and body to the response
 func WriteResponse(w http.ResponseWriter, r *http.Request, statusCode int, body interface{}) {
 	fn := "WriteResponse"
 	bodyBytes, err := json.Marshal(body)
