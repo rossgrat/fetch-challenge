@@ -4,7 +4,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/fetch-challenge/src/receipt-processor/api"
+	"github.com/rossgrat/fetch-challenge/src/receipt-processor/api"
 )
 
 func main() {
@@ -12,11 +12,15 @@ func main() {
 	// TODO: Setup logging here
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		// TODO: Return not found 404
+		w.WriteHeader(http.StatusNotFound)
 	})
-	http.Handle("/receipts/process", api.ReceiptsProcessHandler)
-	http.Handle("/recipts/{id}/points", api.ReceiptPointsHandler)
 
+	// TODO: Wrap handlers in logging middleware
+	http.HandleFunc("/receipts/process", api.ReceiptsProcessHandler)
+	http.HandleFunc("/receipts/{id}/points", api.ReceiptPointsHandler)
+
+	// TODO: Configure
+	log.Println("Starting up!")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
