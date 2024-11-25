@@ -6,7 +6,7 @@ import (
 	"github.com/google/uuid"
 )
 
-var uuidToReceipt map[uuid.UUID]Receipt
+var uuidToReceipt map[uuid.UUID]Receipt = make(map[uuid.UUID]Receipt)
 
 type Receipt struct {
 	Points int

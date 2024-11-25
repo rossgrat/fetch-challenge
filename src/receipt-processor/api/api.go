@@ -1,8 +1,11 @@
 package api
 
 import (
+	"encoding/json"
 	"net/http"
+	"strings"
 
+	"github.com/rossgrat/fetch-challenge/src/logger"
 	"github.com/rossgrat/fetch-challenge/src/receipt-processor/db"
 )
 
@@ -34,36 +37,37 @@ type ReceiptID struct {
 // we would do that here
 func ReceiptsProcessHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		w.WriteHeader(http.StatusNotFound)
+		WriteResponse(w, r, http.StatusNotFound,
+			ErrorResponse{Description: "Incorrect method"})
 		return
 	}
 
 	var receipt Receipt
-	if err := ReadJSONFromRequest(r, &receipt); err != nil {
-		WriteResponse(w, http.StatusBadRequest,
+	defer r.Body.Close()
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&receipt); err != nil {
+		logger.LogInfo(r, err.Error())
+		WriteResponse(w, r, http.StatusBadRequest,
 			ErrorResponse{Description: "The receipt is invalid"})
 		return
 	}
 
 	if err := ValidateReceipt(receipt); err != nil {
-		WriteResponse(w, http.StatusBadRequest,
+		logger.LogInfo(r, err.Error())
+		WriteResponse(w, r, http.StatusBadRequest,
 			ErrorResponse{Description: "The receipt is invalid"})
 		return
 	}
 
-	points, err := CalculateReceiptPoints(receipt)
-	if err != nil {
-		WriteResponse(w, http.StatusBadRequest,
-			ErrorResponse{Description: "The receipt is invalid"})
-		return
-	}
+	points := CalculateReceiptPoints(receipt)
 
 	dbReceipt := db.Receipt{
 		Points: points,
 	}
 	receiptID, err := db.CreateReceipt(dbReceipt)
 	if err != nil {
-		WriteResponse(w, http.StatusBadRequest,
+		logger.LogInfo(r, err.Error())
+		WriteResponse(w, r, http.StatusBadRequest,
 			ErrorResponse{Description: "The receipt is invalid"})
 		return
 	}
@@ -71,7 +75,7 @@ func ReceiptsProcessHandler(w http.ResponseWriter, r *http.Request) {
 	response := ReceiptID{
 		ID: receiptID,
 	}
-	WriteResponse(w, http.StatusOK, response)
+	WriteResponse(w, r, http.StatusOK, response)
 }
 
 type ReceiptPoints struct {
@@ -80,10 +84,24 @@ type ReceiptPoints struct {
 
 // receipts/:id/points
 func ReceiptPointsHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		WriteResponse(w, r, http.StatusNotFound,
+			ErrorResponse{Description: "Incorrect method"})
+		return
+	}
 
-	// TODO: Verify GET method
-	// TODO: Load receipt poinyd by ID from database
-	//	TODO: Return 404 if no receipt exists
-	// TODO: Write receipt points to response and return 200
+	pathParts := strings.Split(r.URL.Path, "/")
+	id := pathParts[2] // Router ensures path has at least 3 splits
 
+	dbReceipt, err := db.GetReceipt(id)
+	if err != nil {
+		WriteResponse(w, r, http.StatusNotFound,
+			ErrorResponse{Description: "No receipt found for that id"})
+		return
+	}
+
+	response := ReceiptPoints{
+		Points: dbReceipt.Points,
+	}
+	WriteResponse(w, r, http.StatusOK, response)
 }

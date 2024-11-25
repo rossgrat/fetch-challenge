@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"math"
 	"net/http"
 	"regexp"
@@ -12,39 +11,26 @@ import (
 	"strings"
 	"time"
 	"unicode"
-)
 
-// Given a JSON request, read the body and marshal to JSON
-func ReadJSONFromRequest(r *http.Request, obj interface{}) error {
-	fn := "ReadJSONFromRequest"
-	defer r.Body.Close()
-	var bodyBytes []byte
-	if _, err := r.Body.Read(bodyBytes); err != nil {
-		return errors.New(fn + ": request body read failed - " + err.Error())
-	}
-	if err := json.Unmarshal(bodyBytes, obj); err != nil {
-		return errors.New(fn + ": json unmarshal failed - " + err.Error())
-	}
-	return nil
-}
+	"github.com/rossgrat/fetch-challenge/src/logger"
+)
 
 // Given an HTTP response write, a status code, and a body, perform the necessary
 // marshalling and and write the status code and body to the response
-func WriteResponse(w http.ResponseWriter, statusCode int, body interface{}) {
+func WriteResponse(w http.ResponseWriter, r *http.Request, statusCode int, body interface{}) {
 	fn := "WriteResponse"
 	bodyBytes, err := json.Marshal(body)
+	w.WriteHeader(statusCode)
 	if err != nil {
-		log.Println(fn+": marshal failed", err.Error())
+		logger.LogInfo(nil, fn+": marshal failed - "+err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	if _, err := w.Write(bodyBytes); err != nil {
-		log.Println(fn+": write failed", err.Error())
+		logger.LogInfo(nil, fn+": write failed -"+err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	log.Println(string(bodyBytes))
-	w.WriteHeader(statusCode)
 }
 
 // Receipts
@@ -70,7 +56,7 @@ func ValidateReceipt(receipt Receipt) error {
 	if _, err := time.Parse(time.DateOnly, receipt.PurchaseDate); err != nil {
 		return errors.New(fmt.Sprintf("%s: invalid purchase date (%s) - %s", fn, receipt.PurchaseDate, err.Error()))
 	}
-	if _, err := time.Parse(time.TimeOnly, receipt.PurchaseTime); err != nil {
+	if _, err := time.Parse("15:04", receipt.PurchaseTime); err != nil {
 		return errors.New(fmt.Sprintf("%s: invalid purchase time (%s) - %s", fn, receipt.PurchaseTime, err.Error()))
 	}
 	if !amountRegex.MatchString(receipt.Total) {
@@ -90,8 +76,7 @@ func ValidateReceipt(receipt Receipt) error {
 }
 
 // We assume a valid receipt
-func CalculateReceiptPoints(receipt Receipt) (int, error) {
-
+func CalculateReceiptPoints(receipt Receipt) int {
 	points := 0
 	// One point for every alphanumeric character in the retailer name
 	for _, char := range receipt.Retailer {
@@ -136,5 +121,5 @@ func CalculateReceiptPoints(receipt Receipt) (int, error) {
 		points = points + 10
 	}
 
-	return points, nil
+	return points
 }
