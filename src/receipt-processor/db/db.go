@@ -1,11 +1,12 @@
 package db
 
-var uuidToPoints map[string]int
+var uuidToReceipt map[string]int
 
 type Receipt struct {
+	Points int
 }
 
-func CreateReceiptPoints(points int) (string, error) {
+func CreateReceipt(Receipt int) (string, error) {
 	// TODO: Generate UUID for receipt
 	// TODO: Save points for receipt
 	return "", nil

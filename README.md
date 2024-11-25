@@ -13,6 +13,7 @@ Things Unimplemented:
 * Extract per handler logging to middleware
 * Rate limiting
 * SSL encryption
+* Error priority, (info, warning, critical)
 
 
 Notes:

@@ -1,34 +1,81 @@
 package api
 
 import (
-	"log"
 	"net/http"
+
+	"github.com/rossgrat/fetch-challenge/src/receipt-processor/db"
 )
 
-type ReceiptProcessRequest struct {
+type ErrorResponse struct {
+	Description string
 }
-type ReceiptProcessResponse struct {
+
+type Item struct {
+	ShortDescription string `json:"shortDescription"`
+	Price            string `json:"price"`
+}
+type Receipt struct {
+	Retailer     string `json:"retailer"`
+	PurchaseDate string `json:"purchaseDate"`
+	PurchaseTime string `json:"purchaseTime"`
+	Items        []Item `json:"items"`
+}
+type ReceiptID struct {
+	ID string `json:"id"`
 }
 
 // /receipts/process
+// In this endpoints, we receive a Receipt object, score it for points,
+// then save those points as a valid receipt UUID, returing the UUID
+//
+// Note: We do not save receipts, or any kind of signature in the
+// database, if we wanted to prevent duplicate receipts from being sent,
+// we would do that here
 func ReceiptsProcessHandler(w http.ResponseWriter, r *http.Request) {
-	log.Println("receipts/process")
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
 
-	// TOOD: Verify POST method
-	// TODO: Read request into JSON
-	// TODO: Validate all JSON fields
-	//	TOOD: Upon Failure, return 400
-	// TODO: Save to database, database returns UUID
-	// TODO: Calculate points for receipt, save under UUID
-	// TODO: Write UUID to response and return 200
+	var receipt Receipt
+	if err := ReadJSONFromRequest(r, &receipt); err != nil {
+		WriteResponse(w, http.StatusBadRequest,
+			ErrorResponse{Description: "The receipt is invalid"})
+		return
+	}
+
+	if err := ValidateReceipt(receipt); err != nil {
+		WriteResponse(w, http.StatusBadRequest,
+			ErrorResponse{Description: "The receipt is invalid"})
+		return
+	}
+
+	points, err := CalculateReceiptPoints(receipt)
+	if err != nil {
+		WriteResponse(w, http.StatusBadRequest,
+			ErrorResponse{Description: "The receipt is invalid"})
+		return
+	}
+
+	receiptID, err := db.CreateReceipt(points)
+	if err != nil {
+		WriteResponse(w, http.StatusBadRequest,
+			ErrorResponse{Description: "The receipt is invalid"})
+		return
+	}
+
+	response := ReceiptID{
+		ID: receiptID,
+	}
+	WriteResponse(w, http.StatusOK, response)
 }
 
-type ReceiptsPointsResponse struct {
+type ReceiptPoints struct {
+	Points int `json:"points"`
 }
 
 // receipts/:id/points
 func ReceiptPointsHandler(w http.ResponseWriter, r *http.Request) {
-	log.Println("receipts/points")
 
 	// TODO: Verify GET method
 	// TODO: Load receipt poinyd by ID from database
