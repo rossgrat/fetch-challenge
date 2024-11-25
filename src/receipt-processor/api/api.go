@@ -19,6 +19,7 @@ type Receipt struct {
 	PurchaseDate string `json:"purchaseDate"`
 	PurchaseTime string `json:"purchaseTime"`
 	Items        []Item `json:"items"`
+	Total        string `json:"total"`
 }
 type ReceiptID struct {
 	ID string `json:"id"`
@@ -57,7 +58,10 @@ func ReceiptsProcessHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	receiptID, err := db.CreateReceipt(points)
+	dbReceipt := db.Receipt{
+		Points: points,
+	}
+	receiptID, err := db.CreateReceipt(dbReceipt)
 	if err != nil {
 		WriteResponse(w, http.StatusBadRequest,
 			ErrorResponse{Description: "The receipt is invalid"})

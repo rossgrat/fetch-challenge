@@ -4,8 +4,8 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/rossgrat/fetch-challenge/src/mw"
 	"github.com/rossgrat/fetch-challenge/src/receipt-processor/api"
-	"github.com/rossgrat/fetch-challenge/src/receipt-processor/mw"
 )
 
 func main() {
