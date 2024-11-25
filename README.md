@@ -8,7 +8,7 @@ The handlers for the endpoints defined in the API document live in `/src/receipt
 
 The `tests` directory is some basic client testing and example receipts, and the `docs` directory is the original project challenge and API definition.
 
-- Ross
+\- Ross
 
 ## Things deferred:
 * Rate limiting
