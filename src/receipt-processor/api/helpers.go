@@ -75,7 +75,8 @@ func ValidateReceipt(receipt Receipt) error {
 	return nil
 }
 
-// We assume a valid receipt
+// Calculate the points for a receipt based on the rules provided
+// in the challenge. We assume a valid receipt here.
 func CalculateReceiptPoints(receipt Receipt) int {
 	points := 0
 	// One point for every alphanumeric character in the retailer name
@@ -97,7 +98,7 @@ func CalculateReceiptPoints(receipt Receipt) int {
 	}
 
 	// 5 points for every two items on the receipt
-	points = points + (len(receipt.Items) / 2)
+	points = points + (len(receipt.Items)/2)*5
 
 	// If the trimmed length of the item description is a multiple of 3, multiply the price by 0.2 and round up to the nearest integer. The result is the number of points earned
 	for _, item := range receipt.Items {
@@ -115,9 +116,11 @@ func CalculateReceiptPoints(receipt Receipt) int {
 	}
 
 	// 10 points if the time of purchase is after 2:00pm and before 4:00pm
-	purchaseTime, _ := time.Parse(time.TimeOnly, receipt.PurchaseTime)
-	purchaseTimeHour, _, _ := purchaseTime.Clock()
-	if purchaseTimeHour > 14 && purchaseTimeHour < 16 {
+	purchaseTime, _ := time.Parse("15:04", receipt.PurchaseTime)
+	purchaseHour, purchaseMinute, _ := purchaseTime.Clock()
+	if purchaseHour >= 14 &&
+		purchaseMinute > 0 &&
+		purchaseHour < 16 {
 		points = points + 10
 	}
 

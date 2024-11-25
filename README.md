@@ -1,20 +1,15 @@
-# Fetch
+# Fetch Receipt Processor Challenge - Ross Grattafiori
 
-Hey Fetch Team, thanks so much for considering me for the Backend Engineer position!
+Hey Fetch Team, thanks so much for considering me for the Backend Engineer position! I'm really excited about this opportunity, and am looking forward to your feedback on my asssessment. Hope you're having a great holiday season!
 
+The web service that fulfills the challenge spec can be invoked in `cmd/run-receipt-processor` with `go run `, or any other flavor of building and executing a go binary.
 
-# TODO
-```/receipts/process```
-- Validate receipt fields before creating an ID
-- Check for repeat receipts by hashing receipt object
+The handlers for the endpoints defined in the API document live in `/src/receipt-process/api`, the 'database' layer is in `/src/receipt-processor/db`. `/src/mw` is some basic middleware, and `/src/logger` is a basic logger.
 
+The `tests` directory is some basic client testing and example receipts, and the `docs` directory is the original project challenge and API definition.
 
-Things Unimplemented:
-* Extract per handler logging to middleware
+# Things deferred:
 * Rate limiting
 * SSL encryption
-* Error priority, (info, warning, critical)
-
-
-Notes:
-* At present, the spec does not call for actually saving the receipts, or preventing duplicate receipts from being submitted, if we wanted to do that, we would need to save some receipt signature, and compare verify that any inbound receipt does not have an exsting signature present in our database
+* Better error configuration (error priority, (info, warning, critical), fields)
+* External configuration files

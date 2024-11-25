@@ -3,16 +3,17 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 
 	"github.com/rossgrat/fetch-challenge/src/receipt-processor/api"
 )
 
 const domain = "http://localhost:8080"
 
+// All tests are present here
 func main() {
 	client := http.Client{}
 
@@ -25,61 +26,124 @@ func main() {
 	}
 
 	// TEST: Receipt name points are valid
-	receipt1 := noPointsReceipt
-	receipt1.Retailer = "Target"
+	receipt := noPointsReceipt
+	receipt.Retailer = "Target"
+	TestProcessReceipt(client, receipt, 6)
 
-	resp1Status, resp1 := POST[api.ReceiptID](client, "/receipts/process", receipt1)
-	if resp1Status != http.StatusOK {
-		panic(errors.New("expected 200"))
-	}
-	resp2Status, resp2 := GET[api.ReceiptPoints](client, "/receipts/"+resp1.ID+"/points")
-	if resp2Status != http.StatusOK {
-		panic(errors.New("expected 200"))
-	}
-	if resp2.Points != 6 {
-		panic(errors.New("expected 6 points"))
-	}
+	receipt = noPointsReceipt
+	receipt.Retailer = "Target&"
+	TestProcessReceipt(client, receipt, 6)
 
 	// TEST: Receipt round dollar amount and multiple of 0.25
-	receipt2 := noPointsReceipt
-	receipt2.Total = "1.00"
-
-	resp3Status, resp3 := POST[api.ReceiptID](client, "/receipts/process", receipt2)
-	if resp3Status != http.StatusOK {
-		panic(errors.New("expected 200"))
-	}
-	resp4Status, resp4 := GET[api.ReceiptPoints](client, "/receipts/"+resp3.ID+"/points")
-	if resp4Status != http.StatusOK {
-		panic(errors.New("expected 200"))
-	}
-	if resp4.Points != 75 {
-		panic(errors.New("expected 75 points"))
-	}
+	receipt = noPointsReceipt
+	receipt.Total = "1.00"
+	TestProcessReceipt(client, receipt, 75)
 
 	// TEST: Multiple of 0.25
-	receipt3 := noPointsReceipt
-	receipt3.Total = "1.25"
+	receipt = noPointsReceipt
+	receipt.Total = "1.25"
+	TestProcessReceipt(client, receipt, 25)
 
-	resp5Status, resp5 := POST[api.ReceiptID](client, "/receipts/process", receipt3)
-	if resp5Status != http.StatusOK {
-		panic(errors.New("expected 200"))
+	// TEST: Two items on receipt, description length not multiple of 3
+	receipt = noPointsReceipt
+	receipt.Items = []api.Item{
+		{
+			ShortDescription: "Item",
+			Price:            "4.00",
+		},
+		{
+			ShortDescription: "Item",
+			Price:            "4.00",
+		},
 	}
-	resp6Status, resp6 := GET[api.ReceiptPoints](client, "/receipts/"+resp5.ID+"/points")
-	if resp6Status != http.StatusOK {
-		panic(errors.New("expected 200"))
+	TestProcessReceipt(client, receipt, 5)
+
+	// TEST: Three items on receipt, description length not multiple of 3
+	receipt.Items = append(receipt.Items, api.Item{
+		ShortDescription: "Item",
+		Price:            "4.00",
+	})
+	TestProcessReceipt(client, receipt, 5)
+
+	// TEST: Trimmed length of item is multiple of 3
+	receipt = noPointsReceipt
+	receipt.Items = []api.Item{
+		{
+			ShortDescription: "aaa",
+			Price:            "18.00",
+		},
 	}
-	if resp6.Points != 25 {
-		panic(errors.New("expected 25 points"))
+	TestProcessReceipt(client, receipt, 4)
+
+	// TEST: Day in purchase date is odd
+	receipt = noPointsReceipt
+	receipt.PurchaseDate = "2000-01-01"
+	TestProcessReceipt(client, receipt, 6)
+
+	receipt = noPointsReceipt
+	receipt.PurchaseDate = "2000-01-02"
+	TestProcessReceipt(client, receipt, 0)
+
+	// TEST: Time is after 2 and before 4
+	receipt = noPointsReceipt
+	receipt.PurchaseTime = "14:01"
+	TestProcessReceipt(client, receipt, 10)
+
+	receipt = noPointsReceipt
+	receipt.PurchaseTime = "15:59"
+	TestProcessReceipt(client, receipt, 10)
+
+	receipt = noPointsReceipt
+	receipt.PurchaseTime = "16:00"
+	TestProcessReceipt(client, receipt, 0)
+
+	receipt = noPointsReceipt
+	receipt.PurchaseTime = "14:00"
+	TestProcessReceipt(client, receipt, 0)
+
+	// TEST: Load simple receipt 1, verify matches provided value
+	receiptBytes, err := os.ReadFile("data/readme-receipt.json")
+	if err != nil {
+		panic(err)
 	}
+	if err := json.Unmarshal(receiptBytes, &receipt); err != nil {
+		panic(err)
+	}
+	TestProcessReceipt(client, receipt, 28)
+
+	// TEST: Load simple receipt 2, verify matches provided value
+	receiptBytes, err = os.ReadFile("data/readme-receipt-2.json")
+	if err != nil {
+		panic(err)
+	}
+	if err := json.Unmarshal(receiptBytes, &receipt); err != nil {
+		panic(err)
+	}
+	TestProcessReceipt(client, receipt, 109)
 
 }
 
-// TODO: test with bad data
-// TODO: test nonexsting endpoints
-// TODO: test with wrong methods
-// TODO: bad JSON
-// TOOD: test receipts out of order
+// Make a request to process a receipt, then turn around and get the points
+// for that receipt
+func TestProcessReceipt(client http.Client, receipt api.Receipt, expectedPoints int) {
+	resp1Status, resp1 := POST[api.ReceiptID](client, "/receipts/process", receipt)
+	if resp1Status != http.StatusOK {
+		fmt.Println("expected 200")
+		os.Exit(1)
+	}
+	resp2Status, resp2 := GET[api.ReceiptPoints](client, "/receipts/"+resp1.ID+"/points")
+	if resp2Status != http.StatusOK {
+		fmt.Println("expected 200")
+		os.Exit(1)
+	}
+	if resp2.Points != expectedPoints {
+		fmt.Printf("expected %d points", expectedPoints)
+		os.Exit(1)
+	}
+}
 
+// Marshal provided data, POST it to the provided path,
+// then unmarshal and return the output if response is OK
 func POST[T any](client http.Client, path string, body interface{}) (int, T) {
 	bodyBytes, err := json.Marshal(body)
 	if err != nil {
@@ -122,6 +186,8 @@ func POST[T any](client http.Client, path string, body interface{}) (int, T) {
 	return resp.StatusCode, respBody
 }
 
+// Retrieve data from the provided path via GET, unmarshal data
+// if response is OK
 func GET[T any](client http.Client, path string) (int, T) {
 	req, err := http.NewRequest(
 		http.MethodGet,

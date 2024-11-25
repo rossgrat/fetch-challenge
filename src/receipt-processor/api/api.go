@@ -10,7 +10,7 @@ import (
 )
 
 type ErrorResponse struct {
-	Description string
+	Description string `json:"description"`
 }
 
 type Item struct {
